@@ -62,7 +62,8 @@ const App: React.FC = () => {
     }
     setLoadingInsight(true);
     try {
-      const aiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+      const aiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+      console.log("AI 初始化檢查 - Key 長度:", aiKey ? aiKey.length : "0 (未讀取到)");
       const ai = new GoogleGenAI({ apiKey: aiKey });
 
       const contextData = `
@@ -117,9 +118,10 @@ const App: React.FC = () => {
       const result = JSON.parse(response.text);
       setInsight(result);
     } catch (error) {
+      console.error("AI Analysis Failed:", error);
       setInsight({
         title: "AI 臨床分析暫時無法載入",
-        dataSummary: "個案數據顯示存在多重營養風險，特別是 MNA 分數已低於臨界點。",
+        dataSummary: "個案數據顯示存在多重營養風險，特別是 MNA 分數已低於臨界點。(錯誤代碼: APID_ERR)",
         recommendations: ["增加優質蛋白攝取", "監控每日飲水量", "進行臨床營養介入"]
       });
     } finally {
