@@ -1,0 +1,5 @@
+{
+  "name": "Senior Nutrition BI Dashboard",
+  "description": "A high-fidelity clinical dashboard for Senior Nutrition Care, featuring MNA (Mini Nutritional Assessment) data visualization including risk gauges, longitudinal trends, anthropometric monitoring, and dietary gap analysis.",
+  "requestFramePermissions": []
+}
