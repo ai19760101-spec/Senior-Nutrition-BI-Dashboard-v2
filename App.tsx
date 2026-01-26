@@ -1,11 +1,11 @@
 
 import React, { useState, useRef } from 'react';
-import { 
-  Activity, 
-  TrendingUp, 
-  Scale, 
-  PieChart, 
-  BrainCircuit, 
+import {
+  Activity,
+  TrendingUp,
+  Scale,
+  PieChart,
+  BrainCircuit,
   Sparkles,
   Upload,
   FileSpreadsheet,
@@ -81,7 +81,7 @@ const App: React.FC = () => {
           }
         }
       });
-      
+
       const result = JSON.parse(response.text);
       setInsight(result);
     } catch (error) {
@@ -95,20 +95,90 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const csvContent =
+      "日期,MNA總分,體重(kg),BMI,MAC(臂中圍),CC(小腿圍),蛋白質攝取(%),蔬果攝取(%),液體攝取(%),進食能力(%),餐數(%)\n" +
+      "2023-11-01,24,55,22.5,23.5,32.0,85,60,80,100,90\n" +
+      "2023-12-01,22,54,21.8,22.0,31.5,70,50,60,90,80\n" +
+      "2024-01-01,19,53,21.0,20.5,29.5,65,40,40,85,70";
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "senior_nutrition_template.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (event) => {
-      // CSV 解析邏輯保持穩定版本
-      alert("數據匯入成功！");
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split('\n').filter(line => line.trim() !== '');
+      // Remove header
+      const rows = lines.slice(1);
+
+      if (rows.length === 0) {
+        alert("CSV 檔案內容為空");
+        return;
+      }
+
+      try {
+        const newTrendData = rows.map(row => {
+          const cols = row.split(',').map(c => c.trim());
+          return {
+            date: cols[0],
+            score: parseFloat(cols[1]) || 0,
+            weight: parseFloat(cols[2]) || 0
+          };
+        });
+
+        const lastRow = rows[rows.length - 1].split(',').map(c => c.trim());
+
+        // Update Trend Data
+        setTrendData(newTrendData);
+
+        // Update Anthro Data (Map to existing structure)
+        // CSV Cols: 3:BMI, 4:MAC, 5:CC
+        setAnthroData(prev => [
+          { ...prev[0], value: parseFloat(lastRow[3]) || 0 }, // BMI
+          { ...prev[1], value: parseFloat(lastRow[4]) || 0 }, // MAC
+          { ...prev[2], value: parseFloat(lastRow[5]) || 0 }  // CC
+        ]);
+
+        // Update Radar Data
+        // CSV Cols: 6:Protein, 7:Veg, 8:Fluid, 9:Feeding, 10:Meals
+        setRadarData([
+          { subject: '蛋白質攝取', value: parseInt(lastRow[6]) || 0, fullMark: 100 },
+          { subject: '蔬果攝取', value: parseInt(lastRow[7]) || 0, fullMark: 100 },
+          { subject: '液體攝取', value: parseInt(lastRow[8]) || 0, fullMark: 100 },
+          { subject: '進食能力', value: parseInt(lastRow[9]) || 0, fullMark: 100 },
+          { subject: '餐數', value: parseInt(lastRow[10]) || 0, fullMark: 100 },
+        ]);
+
+        alert("數據匯入成功！圖表已更新。");
+      } catch (error) {
+        console.error("CSV Parse Error:", error);
+        alert("數據格式錯誤，請確保使用正確的範本格式。");
+      }
     };
     reader.readAsText(file);
+
+    // Clear input so same file can be uploaded again
+    e.target.value = '';
   };
 
   return (
     <div className="min-h-screen pb-12 bg-slate-50 font-sans">
-      <DashboardHeader 
+      <DashboardHeader
         title="高齡營養照護 BI 健康儀表板"
         subtitle="將數據轉化為行動：專為醫護設計的迷你營養評估 (MNA®) 視覺化支援系統。"
       />
@@ -123,9 +193,12 @@ const App: React.FC = () => {
               <p className="text-[10px] text-slate-500">支援 MNA 標準 CSV</p>
             </div>
           </div>
-          
+
           <div className="flex gap-3">
-            <button className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition text-sm font-bold">
+            <button
+              onClick={handleDownloadTemplate}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition text-sm font-bold"
+            >
               <FileText className="w-4 h-4" /> 下載範本
             </button>
             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
