@@ -62,7 +62,8 @@ const App: React.FC = () => {
     }
     setLoadingInsight(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+      const aiKey = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+      const ai = new GoogleGenAI({ apiKey: aiKey });
 
       const contextData = `
       【個案臨床數據總表】
@@ -287,8 +288,8 @@ const App: React.FC = () => {
               onClick={generateAIInsight}
               disabled={loadingInsight || trendData.length === 0}
               className={`mt-8 w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl transition font-bold text-sm shadow-lg ${trendData.length === 0
-                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
                 } disabled:opacity-50`}
             >
               <Sparkles className={`w-4 h-4 ${loadingInsight ? 'animate-spin' : ''}`} />
