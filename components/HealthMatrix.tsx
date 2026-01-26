@@ -2,11 +2,15 @@
 import React from 'react';
 import { Frown, Meh, Smile } from 'lucide-react';
 
-const HealthMatrix: React.FC = () => {
+interface Props {
+  data: number[];
+}
+
+const HealthMatrix: React.FC<Props> = ({ data }) => {
   const rows = [
-    { label: '自覺營養狀況', value: 0 },
-    { label: '與同齡者相比健康狀況', value: 0 },
-    { label: '神經精神問題 (失智或憂鬱)', value: 0 },
+    { label: '自覺營養狀況' },
+    { label: '與同齡者相比健康狀況' },
+    { label: '神經精神問題 (失智或憂鬱)' },
   ];
 
   const levels = [
@@ -19,9 +23,9 @@ const HealthMatrix: React.FC = () => {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-4 gap-2 items-center text-[10px] text-slate-400 font-bold mb-1">
         <div></div>
-        <div className="text-center">自覺<br/>營養狀況</div>
-        <div className="text-center">與同齡相比<br/>健康狀況</div>
-        <div className="text-center">神經精神問題<br/>(失智或憂鬱)</div>
+        <div className="text-center">自覺<br />營養狀況</div>
+        <div className="text-center">與同齡相比<br />健康狀況</div>
+        <div className="text-center">神經精神問題<br />(失智或憂鬱)</div>
       </div>
 
       {levels.map((lvl, lIdx) => (
@@ -30,16 +34,18 @@ const HealthMatrix: React.FC = () => {
             {lvl.label}
           </div>
           {rows.map((row, rIdx) => {
-             // In the mock image, the top row (0 points) is all selected
-             const isActive = lIdx === 0;
-             const Icon = lvl.icon;
-             return (
-               <div key={rIdx} className="flex justify-center">
-                 <div className={`p-3 rounded-full transition-all duration-500 ${isActive ? `${lvl.bg} ${lvl.color} ring-2 ring-offset-2 ring-red-100 shadow-sm` : 'text-slate-200 opacity-30'}`}>
-                   <Icon className="w-6 h-6" />
-                 </div>
-               </div>
-             );
+            // lIdx represents the level (0, 1, 2)
+            // rIdx represents the category index (0, 1, 2)
+            // data[rIdx] holds the actual score for that category
+            const isActive = data[rIdx] === lIdx;
+            const Icon = lvl.icon;
+            return (
+              <div key={rIdx} className="flex justify-center">
+                <div className={`p-3 rounded-full transition-all duration-500 ${isActive ? `${lvl.bg} ${lvl.color} ring-2 ring-offset-2 ring-red-100 shadow-sm` : 'text-slate-200 opacity-30'}`}>
+                  <Icon className="w-6 h-6" />
+                </div>
+              </div>
+            );
           })}
         </div>
       ))}

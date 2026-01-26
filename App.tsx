@@ -35,26 +35,23 @@ const App: React.FC = () => {
   const [loadingInsight, setLoadingInsight] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [trendData, setTrendData] = useState([
-    { date: '2023年7月', score: 20, weight: 55 },
-    { date: '2023年8月', score: 20, weight: 55 },
-    { date: '2023年9月', score: 17, weight: 52 },
-    { date: '2023年10月', score: 15, weight: 52 },
-  ]);
+  const [trendData, setTrendData] = useState<{ date: string, score: number, weight: number }[]>([]);
 
   const [radarData, setRadarData] = useState([
-    { subject: '蛋白質攝取', value: 80, fullMark: 100 },
-    { subject: '蔬果攝取', value: 45, fullMark: 100 },
-    { subject: '液體攝取', value: 30, fullMark: 100 },
-    { subject: '進食能力', value: 95, fullMark: 100 },
-    { subject: '餐數', value: 70, fullMark: 100 },
+    { subject: '蛋白質攝取', value: 0, fullMark: 100 },
+    { subject: '蔬果攝取', value: 0, fullMark: 100 },
+    { subject: '液體攝取', value: 0, fullMark: 100 },
+    { subject: '進食能力', value: 0, fullMark: 100 },
+    { subject: '餐數', value: 0, fullMark: 100 },
   ]);
 
   const [anthroData, setAnthroData] = useState([
-    { label: 'BMI (身體質量指數)', value: 18.5, min: 15, max: 25, thresholds: [19, 21, 23], unit: '' },
-    { label: 'MAC (臂中圍)', value: 20.5, min: 18, max: 24, thresholds: [20, 21], unit: 'cm' },
-    { label: 'CC (小腿圍)', value: 29.5, min: 25, max: 35, thresholds: [29, 31], unit: 'cm' },
+    { label: 'BMI (身體質量指數)', value: 0, min: 15, max: 25, thresholds: [19, 21, 23], unit: '' },
+    { label: 'MAC (臂中圍)', value: 0, min: 18, max: 24, thresholds: [20, 21], unit: 'cm' },
+    { label: 'CC (小腿圍)', value: 0, min: 25, max: 35, thresholds: [29, 31], unit: 'cm' },
   ]);
+
+  const [healthData, setHealthData] = useState([-1, -1, -1]);
 
   const currentMNA = trendData.length > 0 ? trendData[trendData.length - 1].score : 0;
 
@@ -62,12 +59,42 @@ const App: React.FC = () => {
     setLoadingInsight(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+
+      const contextData = `
+      【個案臨床數據總表】
+      1. 用戶基本狀態:
+         - 評估日期: ${trendData.length > 0 ? trendData[trendData.length - 1].date : "無評估記錄"}
+         - MNA 營養篩檢總分: ${currentMNA}分 (評估標準: >23.5良好, 17-23.5風險, <17營養不良)
+      
+      2. 身體組成指標 (Anthropometry):
+         - BMI: ${anthroData[0].value} (標準: 18.5-24)
+         - 臂中圍 (MAC): ${anthroData[1].value} cm
+         - 小腿圍 (CC): ${anthroData[2].value} cm (肌少症風險指標)
+
+      3. 飲食攝取達成率 (雷達圖數據, 0-100%):
+         ${radarData.map(d => `- ${d.subject}: ${d.value}%`).join('\n         ')}
+
+      4. 自覺健康評估 (Health Matrix, 0-2分):
+         - 自覺營養狀況: ${healthData[0]}分 (0=不好, 2=沒問題)
+         - 同齡比較健康狀況: ${healthData[1]}分
+         - 神經心理狀況: ${healthData[2]}分 (0=有嚴重問題)
+      `;
+
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `作為專業營養師，請分析以下個案數據：
-        - MNA 總分: ${currentMNA} (風險評估)
-        - BMI: ${anthroData[0].value}
-        - 飲食達成率: ${radarData.map(d => `${d.subject}: ${d.value}%`).join(', ')}`,
+        model: 'gemini-2.0-flash',
+        contents: `你是一位講求實證醫學 (Evidence-Based Medicine) 的資深臨床營養師。請根據下列真實的臨床數據，撰寫一份營養評估與介入報告。
+
+        ${contextData}
+
+        【嚴格寫作規範 (Strict Rules)】
+        1. **拒絕幻覺 (No Hallucinations)**: 報告中提到的每一個狀況，都必須有數據支持。絕對不可編造數據。
+        2. **強制數據引用 (Mandatory Citation)**: 
+           - 在每一句描述或建議的結尾，**必須**使用中括號 [...] 標註依據的數值來源。
+           - 格式範例: "個案蛋白質攝取嚴重不足 [蛋白質攝取: 45%]，且伴隨肌肉流失風險 [CC: 29cm]。"
+           - 如果沒有數據支持，就不要寫。
+        3. **邏輯連貫**: 請將飲食攝取缺口與身體組成狀況連結起來分析。例如：蛋白質攝取低 -> 導致 CC (肌肉量) 下降。
+
+        請依照以下 JSON 格式輸出：`,
         config: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -97,10 +124,10 @@ const App: React.FC = () => {
 
   const handleDownloadTemplate = () => {
     const csvContent =
-      "日期,MNA總分,體重(kg),BMI,MAC(臂中圍),CC(小腿圍),蛋白質攝取(%),蔬果攝取(%),液體攝取(%),進食能力(%),餐數(%)\n" +
-      "2023-11-01,24,55,22.5,23.5,32.0,85,60,80,100,90\n" +
-      "2023-12-01,22,54,21.8,22.0,31.5,70,50,60,90,80\n" +
-      "2024-01-01,19,53,21.0,20.5,29.5,65,40,40,85,70";
+      "日期,MNA總分,體重(kg),BMI,MAC(臂中圍),CC(小腿圍),蛋白質攝取(%),蔬果攝取(%),液體攝取(%),進食能力(%),餐數(%),自覺營養狀況(0-2),與同齡相比健康狀況(0-2),神經精神問題(0-2)\n" +
+      "2023-11-01,24,55,22.5,23.5,32.0,85,60,80,100,90,2,2,2\n" +
+      "2023-12-01,22,54,21.8,22.0,31.5,70,50,60,90,80,1,1,2\n" +
+      "2024-01-01,19,53,21.0,20.5,29.5,65,40,40,85,70,0,0,1";
 
     const blob = new Blob(["\ufeff" + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -162,6 +189,14 @@ const App: React.FC = () => {
           { subject: '液體攝取', value: parseInt(lastRow[8]) || 0, fullMark: 100 },
           { subject: '進食能力', value: parseInt(lastRow[9]) || 0, fullMark: 100 },
           { subject: '餐數', value: parseInt(lastRow[10]) || 0, fullMark: 100 },
+        ]);
+
+        // Update Health Data
+        // CSV Cols: 11:SelfNutrition, 12:PeerHealth, 13:Neuro
+        setHealthData([
+          parseInt(lastRow[11]) || 0,
+          parseInt(lastRow[12]) || 0,
+          parseInt(lastRow[13]) || 0
         ]);
 
         alert("數據匯入成功！圖表已更新。");
@@ -243,7 +278,7 @@ const App: React.FC = () => {
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-6"><BrainCircuit className="text-indigo-600 w-5 h-5" /><h2 className="text-lg font-bold text-slate-800">神經心理與自覺健康</h2></div>
-            <HealthMatrix />
+            <HealthMatrix data={healthData} />
             <button onClick={generateAIInsight} disabled={loadingInsight} className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-bold text-sm shadow-lg disabled:opacity-50">
               <Sparkles className={`w-4 h-4 ${loadingInsight ? 'animate-spin' : ''}`} /> {loadingInsight ? '正在分析數據...' : '生成臨床 AI 建議'}
             </button>
