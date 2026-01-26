@@ -56,6 +56,10 @@ const App: React.FC = () => {
   const currentMNA = trendData.length > 0 ? trendData[trendData.length - 1].score : 0;
 
   const generateAIInsight = async () => {
+    if (trendData.length === 0) {
+      alert("目前儀表板尚無數據，請先匯入臨床 CSV 檔案。 (避免 Token 浪費)");
+      return;
+    }
     setLoadingInsight(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
@@ -279,8 +283,16 @@ const App: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-6"><BrainCircuit className="text-indigo-600 w-5 h-5" /><h2 className="text-lg font-bold text-slate-800">神經心理與自覺健康</h2></div>
             <HealthMatrix data={healthData} />
-            <button onClick={generateAIInsight} disabled={loadingInsight} className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-bold text-sm shadow-lg disabled:opacity-50">
-              <Sparkles className={`w-4 h-4 ${loadingInsight ? 'animate-spin' : ''}`} /> {loadingInsight ? '正在分析數據...' : '生成臨床 AI 建議'}
+            <button
+              onClick={generateAIInsight}
+              disabled={loadingInsight || trendData.length === 0}
+              className={`mt-8 w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl transition font-bold text-sm shadow-lg ${trendData.length === 0
+                  ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                } disabled:opacity-50`}
+            >
+              <Sparkles className={`w-4 h-4 ${loadingInsight ? 'animate-spin' : ''}`} />
+              {loadingInsight ? '正在分析數據...' : trendData.length === 0 ? '請先匯入數據以啟動 AI' : '生成臨床 AI 建議'}
             </button>
           </div>
         </div>
