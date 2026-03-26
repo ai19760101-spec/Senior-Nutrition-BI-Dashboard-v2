@@ -21,7 +21,7 @@ import {
   FileText
 } from 'lucide-react';
 import PatientSearchModal from './components/PatientSearchModal';
-import { GoogleGenAI, Type } from "@google/genai";
+// Google AI SDK removed from frontend for security
 
 // Components
 import DashboardHeader from './components/DashboardHeader';
@@ -169,72 +169,34 @@ const App: React.FC = () => {
 
   const generateAIInsight = async () => {
     if (trendData.length === 0) {
-      alert("目前儀表板尚無數據，請先匯入臨床 CSV 檔案。 (避免 Token 浪費)");
+      alert("目前儀表板尚無數據，請先從資料庫搜尋個案。");
       return;
     }
     setLoadingInsight(true);
     try {
-      const aiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY || '';
-      console.log("AI 初始化檢查 - Key 長度:", aiKey ? aiKey.length : "0 (未讀取到)");
-      const ai = new GoogleGenAI({ apiKey: aiKey });
-
-      const contextData = `
-      【個案臨床數據總表】
-      1. 用戶基本狀態:
-         - 評估日期: ${trendData.length > 0 ? trendData[trendData.length - 1].date : "無評估記錄"}
-         - MNA 營養篩檢總分: ${currentMNA}分 (評估標準: >23.5良好, 17-23.5風險, <17營養不良)
-      
-      2. 身體組成指標 (Anthropometry):
-         - BMI: ${anthroData[0].value} (標準: 18.5-24)
-         - 臂中圍 (MAC): ${anthroData[1].value} cm
-         - 小腿圍 (CC): ${anthroData[2].value} cm (肌少症風險指標)
-
-      3. 飲食攝取達成率 (雷達圖數據, 0-100%):
-         ${radarData.map(d => `- ${d.subject}: ${d.value}%`).join('\n         ')}
-
-      4. 自覺健康評估 (Health Matrix, 0-2分):
-         - 自覺營養狀況: ${healthData[0]}分 (0=不好, 2=沒問題)
-         - 同齡比較健康狀況: ${healthData[1]}分
-         - 神經心理狀況: ${healthData[2]}分 (0=有嚴重問題)
-      `;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: `你是一位講求實證醫學 (Evidence-Based Medicine) 的資深臨床營養師。請根據下列真實的臨床數據，撰寫一份營養評估與介入報告。
-
-        ${contextData}
-
-        【嚴格寫作規範 (Strict Rules)】
-        1. **拒絕幻覺 (No Hallucinations)**: 報告中提到的每一個狀況，都必須有數據支持。絕對不可編造數據。
-        2. **強制數據引用 (Mandatory Citation)**: 
-           - 在每一句描述或建議的結尾，**必須**使用中括號 [...] 標註依據的數值來源。
-           - 格式範例: "個案蛋白質攝取嚴重不足 [蛋白質攝取: 45%]，且伴隨肌肉流失風險 [CC: 29cm]。"
-           - 如果沒有數據支持，就不要寫。
-        3. **邏輯連貫**: 請將飲食攝取缺口與身體組成狀況連結起來分析。例如：蛋白質攝取低 -> 導致 CC (肌肉量) 下降。
-
-        請依照以下 JSON 格式輸出：`,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              dataSummary: { type: Type.STRING },
-              recommendations: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ["title", "dataSummary", "recommendations"]
-          }
-        }
+      const response = await fetch('/api/generate-recommendations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentMNA,
+          anthroData,
+          radarData,
+          healthData,
+          lastAssessment: trendData[trendData.length - 1]
+        }),
       });
 
-      const result = JSON.parse(response.text);
+      if (!response.ok) throw new Error('AI 分析服務異常 (APID_ERR)');
+      const result = await response.json();
       setInsight(result);
     } catch (error) {
       console.error("AI Analysis Failed:", error);
       setInsight({
         title: "AI 臨床分析暫時無法載入",
-        dataSummary: "個案數據顯示存在多重營養風險，特別是 MNA 分數已低於臨界點。(錯誤代碼: APID_ERR)",
-        recommendations: ["增加優質蛋白攝取", "監控每日飲水量", "進行臨床營養介入"]
+        dataSummary: "個案數據分析中遇到技術問題，請稍後再試或檢查 API 設定。(錯誤代碼: APID_ERR)",
+        recommendations: ["確認 VPN 連線是否穩定", "檢查 Gemini API 金鑰有效性", "請聯絡系統管理員"]
       });
     } finally {
       setLoadingInsight(false);
@@ -522,10 +484,10 @@ const App: React.FC = () => {
               <div className="md:col-span-2">
                 <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-3">優先臨床建議</p>
                 <ul className="space-y-3">
-                  {insight.recommendations.map((rec, idx) => (
+                  {(insight.recommendations || []).map((rec, idx) => (
                     <li key={idx} className="flex gap-4 text-sm text-slate-700 items-start group">
                       <span className="flex-shrink-0 w-6 h-6 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs group-hover:bg-indigo-600 group-hover:text-white transition-colors">{idx + 1}</span>
-                      <p className="font-medium pt-0.5">{rec}</p>
+                      <p className="font-medium pt-0.5">{rec || '無具體建議'}</p>
                     </li>
                   ))}
                 </ul>

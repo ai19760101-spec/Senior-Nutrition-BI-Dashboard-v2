@@ -41,7 +41,10 @@ const poolPromise = new mssql.ConnectionPool(dbConfig)
         return null; // Return null instead of throwing to prevent crash
     });
 
+const geminiKey = configMap['API Key'];
+
 module.exports = {
     mssql,
-    poolPromise
+    poolPromise,
+    geminiKey
 };

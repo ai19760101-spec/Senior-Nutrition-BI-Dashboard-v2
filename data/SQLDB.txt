@@ -7,4 +7,5 @@ SQLServer
 資料表:營養系統_迷你營養評估, 基本資料_個案
 view:vw_營養系統_迷你營養評估_BI報表
 
-Google API Key:AIzaSyCUpTtjU0m7qY4inLHmQdp2rtTqKTkbI-w
+Google
+API Key:AIzaSyCUpTtjU0m7qY4inLHmQdp2rtTqKTkbI-w
