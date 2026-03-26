@@ -1,5 +1,10 @@
-SQLServerIP:172.23.19.168
+SQLServer
+伺服器名稱:172.23.19.168
+驗證:SQL Server驗證
 帳號:Wheat_admin
 密碼:Wheat(^)@))
-DB:Wheat_DB
-資料表:營養系統_迷你營養評估/基本資料_個案
+資料庫:Wheat_DB
+資料表:營養系統_迷你營養評估, 基本資料_個案
+view:vw_營養系統_迷你營養評估_BI報表
+
+Google API Key:AIzaSyCUpTtjU0m7qY4inLHmQdp2rtTqKTkbI-w

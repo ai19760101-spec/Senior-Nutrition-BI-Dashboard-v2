@@ -6,14 +6,21 @@ import {
   Scale,
   PieChart,
   BrainCircuit,
-  Sparkles,
+  Search,
+  Calendar,
   Upload,
   FileSpreadsheet,
-  FileText,
+  ArrowRight,
+  Database,
+  Users,
+  Loader2,
+  Sparkles,
+  FileCheck,
   ClipboardCheck,
   Lightbulb,
-  FileCheck
+  FileText
 } from 'lucide-react';
+import PatientSearchModal from './components/PatientSearchModal';
 import { GoogleGenAI, Type } from "@google/genai";
 
 // Components
@@ -52,6 +59,111 @@ const App: React.FC = () => {
   ]);
 
   const [healthData, setHealthData] = useState([-1, -1, -1]);
+  const [searchId, setSearchId] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 3); // Default to 3 years ago
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const fetchNutritionData = async (targetId?: string, targetStart?: string, targetEnd?: string) => {
+    const id = targetId || searchId;
+    const start = targetStart || startDate;
+    const end = targetEnd || endDate;
+
+    if (!id) {
+      alert("請輸入身分證字號進行查詢");
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const queryParams = new URLSearchParams({
+        id_no: id,
+        start_date: start,
+        end_date: end
+      });
+      const response = await fetch(`/api/nutrition-data?${queryParams.toString()}`);
+      if (!response.ok) throw new Error('Data fetch failed');
+      const data = await response.json();
+      
+      console.log(`[Query] ID: ${id}, Results: ${data.length}`);
+
+      if (data.length === 0) {
+        // --- AUTONOMOUS DISCOVERY LOGIC ---
+        console.log("No data in current range. Attempting Auto-Discovery...");
+        const latestResponse = await fetch(`/api/latest-date?id_no=${id}`);
+        const latestInfo = await latestResponse.json();
+        
+        if (latestInfo && latestInfo.latest) {
+          const latestDate = new Date(latestInfo.latest);
+          console.log("Found latest data at:", latestDate.toLocaleDateString());
+          
+          // Auto-adjust range: 2 years before latest to latest date
+          const newStart = new Date(latestDate);
+          newStart.setFullYear(newStart.getFullYear() - 2);
+          const newStartStr = newStart.toISOString().split('T')[0];
+          const newEndStr = latestDate.toISOString().split('T')[0];
+          
+          setStartDate(newStartStr);
+          setEndDate(newEndStr);
+          
+          // Recursive call with new dates
+          return fetchNutritionData(id, newStartStr, newEndStr);
+        } else {
+          alert("資料庫內查無此個案之任何評估數據。");
+          setIsSearching(false);
+          return;
+        }
+      }
+
+      // Helper for fuzzy field mapping
+      const getField = (row: any, keys: string[]) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null) return row[key];
+        }
+        return null;
+      };
+
+      const newTrendData = data.map((row: any) => ({
+        date: typeof row['日期'] === 'string' ? row['日期'].split('T')[0] : (row['日期'] instanceof Date ? row['日期'].toISOString().split('T')[0] : row['日期']),
+        score: parseFloat(getField(row, ['MNA總分', 'MNAScore', 'MNA_Total', 'MNA'])) || 0,
+        weight: parseFloat(getField(row, ['體重(kg)', '體重', 'Weight'])) || 0
+      })).reverse();
+
+      const lastRow = data[0]; 
+
+      setTrendData(newTrendData);
+      setAnthroData(prev => [
+        { ...prev[0], value: parseFloat(getField(lastRow, ['BMI'])) || 0 },
+        { ...prev[1], value: parseFloat(lastRow['MAC(臂中圍)'] || lastRow['MAC'] || lastRow['MAC_臂中圍'] || lastRow['臂中圍']) || 0 },
+        { ...prev[2], value: parseFloat(lastRow['CC(小腿圍)'] || lastRow['CC'] || lastRow['CC_小腿圍'] || lastRow['小腿圍']) || 0 }
+      ]);
+
+      setRadarData([
+        { subject: '蛋白質攝取', value: parseInt(getField(lastRow, ['蛋白質攝取(%)', '蛋白質攝取', 'Protein'])) || 0, fullMark: 100 },
+        { subject: '蔬果攝取', value: parseInt(getField(lastRow, ['蔬果攝取(%)', '蔬果攝取', 'Vegetables'])) || 0, fullMark: 100 },
+        { subject: '液體攝取', value: parseInt(getField(lastRow, ['液體攝取(%)', '液體攝取', 'Fluids'])) || 0, fullMark: 100 },
+        { subject: '進食能力', value: parseInt(getField(lastRow, ['進食能力(%)', '進食能力', 'Feeding'])) || 0, fullMark: 100 },
+        { subject: '餐數', value: parseInt(getField(lastRow, ['餐數(%)', '餐數', 'Meals'])) || 0, fullMark: 100 },
+      ]);
+
+      setHealthData([
+        parseInt(getField(lastRow, ['自覺營養狀況(0-2)', '自覺營養狀況', 'Self_Nutrition'])) || 0,
+        parseInt(getField(lastRow, ['與同齡相比健康狀況(0-2)', '與同齡相比健康狀況', 'Self_Health'])) || 0,
+        parseInt(getField(lastRow, ['神經精神問題(0-2)', '神經精神問題', 'Neuro_Psych'])) || 0
+      ]);
+
+      setInsight(null);
+    } catch (error) {
+      console.error("SQL Fetch Error:", error);
+      alert("連線失敗，請確保 VPN 已開啟且服務正常。");
+    } finally {
+      setIsSearching(false);
+    }
+  };
 
   const currentMNA = trendData.length > 0 ? trendData[trendData.length - 1].score : 0;
 
@@ -226,30 +338,123 @@ const App: React.FC = () => {
       />
 
       <main className="max-w-[1400px] mx-auto px-4 md:px-6 mt-6">
-        {/* Actions Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-4 mb-8">
-          <div className="flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-            <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600"><FileSpreadsheet className="w-5 h-5" /></div>
-            <div>
-              <p className="text-xs font-bold text-slate-800">數據引擎</p>
-              <p className="text-[10px] text-slate-500">支援 MNA 標準 CSV</p>
+        {/* SQL Search & Actions Section */}
+        <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 mb-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+            <Database className="w-48 h-48" />
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-end relative">
+            <div className="space-y-2 lg:col-span-1">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <Users className="w-3 h-3 text-indigo-500" /> 個案選擇
+              </label>
+              <div className="relative group">
+                <input
+                  type="text"
+                  value={searchId}
+                  onChange={(e) => setSearchId(e.target.value)}
+                  placeholder="輸入身分證字號..."
+                  className="w-full pl-4 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition font-bold"
+                />
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="absolute right-2 top-1.5 p-1.5 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-100 transition shadow-sm border border-indigo-100"
+                  title="開啟個案清單"
+                >
+                  <Search className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2 lg:col-span-1">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <Calendar className="w-3 h-3 text-indigo-500" /> 日期 (起)
+              </label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-bold"
+              />
+            </div>
+
+            <div className="space-y-2 lg:col-span-1">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <Calendar className="w-3 h-3 text-indigo-500" /> 日期 (迄)
+              </label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none transition font-bold"
+              />
+            </div>
+
+            <div className="lg:col-span-1">
+              <button
+                onClick={() => fetchNutritionData()}
+                disabled={isSearching || !searchId}
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-6 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition font-black text-sm shadow-lg shadow-indigo-200 disabled:bg-slate-300 disabled:shadow-none active:scale-[0.98]"
+              >
+                {isSearching ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <ArrowRight className="w-5 h-5" /> 執行查詢
+                  </>
+                )}
+              </button>
             </div>
           </div>
+          
+          <div className="mt-8 pt-6 border-t border-slate-100 flex flex-wrap justify-between items-center gap-4">
+            <div className="flex items-center gap-4 bg-slate-50/80 py-2 px-4 rounded-2xl border border-slate-100">
+               <div className="bg-white p-2 rounded-xl shadow-sm text-indigo-600 border border-indigo-50">
+                 <BrainCircuit className="w-4 h-4" />
+               </div>
+               <div>
+                 <p className="text-[10px] font-black text-slate-800 tracking-tighter uppercase">數據整合介面</p>
+                 <p className="text-[10px] text-slate-500 font-medium">已對接 vw_營養系統_迷你營養評估_BI報表</p>
+               </div>
+            </div>
 
-          <div className="flex gap-3">
-            <button
-              onClick={handleDownloadTemplate}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition text-sm font-bold"
-            >
-              <FileText className="w-4 h-4" /> 下載範本
-            </button>
-            <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
-            <button onClick={() => fileInputRef.current?.click()} className="flex-1 sm:flex-none flex items-center justify-center gap-2 py-2.5 px-6 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-bold text-sm shadow-md">
-              <Upload className="w-4 h-4" /> 匯入數據
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDownloadTemplate}
+                className="flex items-center gap-2 py-2.5 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition text-xs font-black shadow-sm"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> 補填範本
+              </button>
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+              <button 
+                onClick={() => fileInputRef.current?.click()} 
+                className="flex items-center gap-2 py-2.5 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50 transition text-xs font-black shadow-sm"
+              >
+                <Upload className="w-4 h-4" /> 離線 CSV 匯入
+              </button>
+            </div>
           </div>
         </div>
 
+        {/* Patient Selection Modal */}
+        <PatientSearchModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelect={(id, date) => {
+          setSearchId(id);
+          if (date) {
+            // Convert to YYYY-MM-DD for the input[type="date"]
+            const formattedDate = new Date(date).toISOString().split('T')[0];
+            setStartDate(formattedDate);
+            setEndDate(formattedDate);
+            // Trigger fetch immediately with the selection
+            fetchNutritionData(id, formattedDate, formattedDate);
+          } else {
+            fetchNutritionData(id);
+          }
+        }}
+      />
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
           <div className="lg:col-span-4 xl:col-span-4 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col items-center">
