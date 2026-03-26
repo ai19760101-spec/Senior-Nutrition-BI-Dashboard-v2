@@ -1,0 +1,5 @@
+SQLServerIP:172.23.19.168
+帳號:Wheat_admin
+密碼:Wheat(^)@))
+DB:Wheat_DB
+資料表:營養系統_迷你營養評估/基本資料_個案
