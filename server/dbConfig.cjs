@@ -2,23 +2,28 @@ const mssql = require('mssql');
 const fs = require('fs');
 const path = require('path');
 
-// Parse SQLDB.txt
+// Parse SQLDB.txt (local fallback)
 const configPath = path.join(__dirname, '../data/SQLDB.txt');
-const configContent = fs.readFileSync(configPath, 'utf8');
-
-const configMap = {};
-configContent.split('\n').forEach(line => {
-    const [key, value] = line.split(':');
-    if (key && value) {
-        configMap[key.trim()] = value.trim();
+let configMap = {};
+try {
+    if (fs.existsSync(configPath)) {
+        const configContent = fs.readFileSync(configPath, 'utf8');
+        configContent.split('\n').forEach(line => {
+            const [key, value] = line.split(':');
+            if (key && value) {
+                configMap[key.trim()] = value.trim();
+            }
+        });
     }
-});
+} catch (e) {
+    console.warn('Local SQLDB.txt not found, using environment variables.');
+}
 
 const dbConfig = {
-    user: configMap['帳號'],
-    password: configMap['密碼'],
-    server: configMap['伺服器名稱'], // Corrected from SQLServerIP
-    database: configMap['資料庫'],     // Corrected from DB
+    user: process.env.SQL_USER || configMap['帳號'],
+    password: process.env.SQL_PASSWORD || configMap['密碼'],
+    server: process.env.SQL_SERVER || configMap['伺服器名稱'],
+    database: process.env.SQL_DATABASE || configMap['資料庫'],
     options: {
         encrypt: false, // Changed to false for better local/on-prem compatibility
         trustServerCertificate: true 
@@ -41,7 +46,7 @@ const poolPromise = new mssql.ConnectionPool(dbConfig)
         return null; // Return null instead of throwing to prevent crash
     });
 
-const geminiKey = configMap['API Key'];
+const geminiKey = process.env.GEMINI_API_KEY || configMap['API Key'];
 
 module.exports = {
     mssql,
