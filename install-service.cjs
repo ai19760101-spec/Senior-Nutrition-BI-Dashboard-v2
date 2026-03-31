@@ -9,7 +9,10 @@ const svc = new Service({
   nodeOptions: [
     '--harmony',
     '--max_old_space_size=4096'
-  ]
+  ],
+  wait: 2,           // Wait 2s before restarting
+  grow: .5,          // Backoff by 50% on each restart
+  maxRestarts: 20    // Max restarts before giving up
 });
 
 // Listen for the "install" event, which indicates the

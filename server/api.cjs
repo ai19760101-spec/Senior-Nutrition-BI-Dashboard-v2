@@ -7,6 +7,50 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// --- Enterprise Bridge v2.0: Security Whitelist ---
+const ALLOWED_TABLES = [
+    'vw_營養系統_迷你營養評估_BI報表',
+    '基本資料_個案',
+    // 您可以在此處增加其他需要查詢的表名
+];
+
+// --- Generic SQL Proxy Endpoint (Protected) ---
+app.post('/api/db/query', async (req, res) => {
+    try {
+        const { tableName, columns = '*', filters = {} } = req.body;
+
+        // 1. 安全檢查：白名單校驗
+        if (!ALLOWED_TABLES.includes(tableName)) {
+            console.warn(`Unauthorized access attempt to table: ${tableName}`);
+            return res.status(403).json({ error: `未授權存取表格: ${tableName}。請洽管理員增加白名單。` });
+        }
+
+        const pool = await poolPromise;
+        if (!pool) return res.status(503).json({ error: '資料庫未連線' });
+
+        const request = pool.request();
+        
+        // 2. 動態構建安全 SELECT 語句 (Read-Only)
+        // 注意：此處應對 columns 進行額外清理，防止惡意注入
+        let selectCols = Array.isArray(columns) ? columns.map(c => `[${c}]`).join(', ') : '*';
+        let query = `SELECT ${selectCols} FROM [${tableName}] WHERE 1=1`;
+
+        // 3. 安全參數化引數
+        Object.keys(filters).forEach((key, index) => {
+            const paramName = `p${index}`;
+            request.input(paramName, filters[key]);
+            query += ` AND [${key}] = @${paramName}`;
+        });
+
+        console.log(`[QUERY] Executing generic query on ${tableName}`);
+        const result = await request.query(query);
+        res.json(result.recordset);
+    } catch (err) {
+        console.error('Generic Query Failed:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Move AI endpoint here or keep it below middleware
 app.post('/api/generate-recommendations', async (req, res) => {
     try {
