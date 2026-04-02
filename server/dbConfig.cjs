@@ -47,7 +47,6 @@ const poolPromise = new mssql.ConnectionPool(dbConfig)
     });
 
 const geminiKey = process.env.GEMINI_API_KEY || configMap['API Key'];
-
 module.exports = {
     mssql,
     poolPromise,

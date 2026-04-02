@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { mssql, poolPromise, geminiKey } = require('./dbConfig.cjs');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const line = require('@line/bot-sdk');
 
 const app = express();
 app.use(cors());
@@ -11,7 +12,11 @@ app.use(express.json());
 const ALLOWED_TABLES = [
     'vw_營養系統_迷你營養評估_BI報表',
     '基本資料_個案',
-    // 您可以在此處增加其他需要查詢的表名
+    'Residents',
+    'RepairRequests',
+    'Staff',
+    'RepairCategories',
+    'NotificationTemplates',
 ];
 
 // --- Generic SQL Proxy Endpoint (Protected) ---
@@ -173,5 +178,5 @@ app.get('/api/latest-date', async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(`BI Dashboard Server running at http://localhost:${port}`);
 });
