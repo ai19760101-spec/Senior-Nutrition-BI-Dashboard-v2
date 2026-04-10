@@ -1,5 +1,7 @@
 @echo off
-TITLE OMEGA SERVICE CLEANUP
+setlocal
+cd /d %~dp0
+TITLE OMEGA SERVICE CLEANUP (FIXED)
 
 echo [INFO] Stopping all Node processes...
 taskkill /F /IM node.exe /T
