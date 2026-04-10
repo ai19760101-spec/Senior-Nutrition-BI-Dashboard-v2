@@ -1,6 +1,7 @@
 const mssql = require('mssql');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // Parse SQLDB.txt (local fallback)
 const configPath = path.join(__dirname, '../data/SQLDB.txt');
