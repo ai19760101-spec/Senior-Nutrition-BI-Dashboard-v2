@@ -65,12 +65,20 @@ app.post('/api/generate-recommendations', async (req, res) => {
 
         const clinicalData = req.body;
         const genAI = new GoogleGenerativeAI(geminiKey);
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-2.0-flash",
-            generationConfig: {
-                responseMimeType: "application/json",
-            }
-        });
+        
+        // --- Model Fallback Strategy ---
+        let model;
+        try {
+            console.log("[AI] Attempting gemini-1.5-flash...");
+            model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        } catch (e) {
+            console.warn("[AI] Flash failed, falling back to gemini-pro...");
+            model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        }
+
+        const generationConfig = {
+            responseMimeType: "application/json",
+        };
 
         const prompt = `你是一位講求實證醫學 的資深臨床營養師。請根據下列真實的臨床數據，撰寫一份營養評估與介入報告。
         
@@ -83,7 +91,10 @@ app.post('/api/generate-recommendations', async (req, res) => {
         3. **格式要求**: 請依照以下 JSON 格式輸出：
            { "title": "...", "dataSummary": "...", "recommendations": ["...", "..."] }`;
 
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig
+        });
         const response = await result.response;
         const text = response.text();
         res.json(JSON.parse(text));
