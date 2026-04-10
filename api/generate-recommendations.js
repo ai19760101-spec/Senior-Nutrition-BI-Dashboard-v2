@@ -52,13 +52,34 @@ export default async function handler(req, res) {
     });
     
     const response = await result.response;
-    const text = response.text();
+    let text = response.text();
     
-    // Ensure accurate JSON parsing
-    res.status(200).json(JSON.parse(text));
+    console.log('Gemini raw output:', text);
+
+    // Robust JSON extraction (in case AI adds markdown fences or extra text)
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      text = jsonMatch[0];
+    }
+    
+    try {
+      res.status(200).json(JSON.parse(text));
+    } catch (parseErr) {
+      console.error('JSON Parse Error:', text);
+      res.status(200).json({
+        title: "分析解析失敗",
+        dataSummary: "AI 輸出格式非標準 JSON，請重試。(RAW: " + text.substring(0, 100) + ")",
+        recommendations: ["再次點擊分析按鈕", "確認數據完整性"]
+      });
+    }
 
   } catch (err) {
     console.error('Vercel AI Generation Failed:', err);
-    res.status(500).json({ error: `AI 服務回傳錯誤: ${err.message}` });
+    // Return specific error to frontend for debugging
+    res.status(200).json({ 
+      title: "AI 臨床分析暫時無法載入",
+      dataSummary: `個案數據分析中遇到技術問題: ${err.message}`,
+      recommendations: ["檢查 Gemini API 金鑰有效性", "確認 Vercel 環境變數已生效 (Deployments -> Redeploy)", "若持續失敗，請聯絡系統管理員或檢查 Google API Quota"]
+    });
   }
 }

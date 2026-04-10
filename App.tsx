@@ -199,15 +199,18 @@ const App: React.FC = () => {
         }),
       });
 
-      if (!response.ok) throw new Error('AI 分析服務異常 (APID_ERR)');
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || 'AI 分析服務異常');
+      }
       const result = await response.json();
       setInsight(result);
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Analysis Failed:", error);
       setInsight({
         title: "AI 臨床分析暫時無法載入",
-        dataSummary: "個案數據分析中遇到技術問題，請稍後再試或檢查 API 設定。(錯誤代碼: APID_ERR)",
-        recommendations: ["確認 VPN 連線是否穩定", "檢查 Gemini API 金鑰有效性", "請聯絡系統管理員"]
+        dataSummary: `分析中發生錯誤：${error.message}`,
+        recommendations: ["確認 VPN 與網路連線", "檢查 Gemini API 金鑰是否有權限", "嘗試重新載入頁面並再次搜尋個案"]
       });
     } finally {
       setLoadingInsight(false);
