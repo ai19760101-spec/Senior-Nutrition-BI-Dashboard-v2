@@ -164,17 +164,17 @@ erDiagram
     SQL_DATABASE=你的資料庫
     ```
 
-### 3.4 遠端部署 (Remote Deployment via RDP)
-針對您在「本地開發」與「遠端 RDP 主機」之間的同步需求，系統提供了自動化部署工具。
+### 3.4 遠端部署與啟動 (Remote Execution Best Practices)
+針對您在「遠端 RDP 主機」上的操作，請務必遵守以下「本地執行」原則以確保系統穩定性。
 
-**前提條件**：
-- 連線 RDP 時，必須勾選：**本機資源 (Local Resources) -> 詳細資料 (More) -> 磁碟機 (Drives) -> C 槽**。
+**關鍵禁令**：
+- ❌ **請勿直接在筆記型電腦路徑 (\\tsclient\C) 下執行啟動腳本**。這會導致 Node.js 因為網路延遲而卡死。
 
-**操作步驟**：
-1.  在 **遠端 RDP 主機** 上，進入專案目錄。
-2.  執行 **`remote-sync-nutrition.bat`**。
-3.  該腳本會將 `\\tsclient\C` 中的最新代碼同步至遠端 `D:\Senior-Nutrition-BI-Dashboard-v2-main`。
-4.  同步過程會自動排除 `node_modules` 以加速傳輸；若環境不同，請在同步後選擇執行 `npm install`。
+**正確操作流程**：
+1.  **同步代碼**：在遠端主機執行 `remote-sync-nutrition.bat`，將代碼同步至遠端硬碟（例如 `D:\Senior-Nutrition-BI-Dashboard-v2-main`）。
+2.  **切換路徑**：開啟遠端主機的檔案總管，進入 **D 槽的專案資料夾**。
+3.  **本地啟動**：在 D 槽資料夾內執行 **`OMEGA-Launch-Bridge.bat`**。
+4.  **獲取網址**：看到以 `trycloudflare.com` 結尾的網址後，系統即進入穩定運作狀態。
 
 ---
 
