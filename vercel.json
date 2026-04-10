@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/generate-recommendations",
+      "destination": "/api/generate-recommendations"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://daughters-breakdown-batman-tramadol.trycloudflare.com/api/:path*"
     }

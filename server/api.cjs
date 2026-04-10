@@ -56,56 +56,7 @@ app.post('/api/db/query', async (req, res) => {
     }
 });
 
-// Move AI endpoint here or keep it below middleware
-app.post('/api/generate-recommendations', async (req, res) => {
-    try {
-        if (!geminiKey) {
-            return res.status(500).json({ error: 'Gemini API Key missing in SQLDB.txt' });
-        }
-
-        const clinicalData = req.body;
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        
-        // --- Model Fallback Strategy ---
-        let model;
-        try {
-            console.log("[AI] Attempting gemini-1.5-flash...");
-            model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        } catch (e) {
-            console.warn("[AI] Flash failed, falling back to gemini-pro...");
-            model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        }
-
-        const generationConfig = {
-            responseMimeType: "application/json",
-        };
-
-        const prompt = `你是一位講求實證醫學 的資深臨床營養師。請根據下列真實的臨床數據，撰寫一份營養評估與介入報告。
-        
-        【個案臨床數據總表】
-        ${JSON.stringify(clinicalData, null, 2)}
-
-        【嚴格寫作規範 (Strict Rules)】
-        1. **拒絕幻覺**: 報告中提到的每一個狀況，都必須有數據支持。
-        2. **強制數據引用**: 在每一句建議結尾標註依據，例如: [蛋白質攝取: 45%], [CC: 29cm]。
-        3. **格式要求**: 請依照以下 JSON 格式輸出：
-           { "title": "...", "dataSummary": "...", "recommendations": ["...", "..."] }`;
-
-        const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig
-        });
-        const response = await result.response;
-        const text = response.text();
-        res.json(JSON.parse(text));
-    } catch (err) {
-        console.error('AI Generation Failed:', err);
-        res.status(500).json({ error: err.message });
-    }
-});
 const port = 3002;
-
-// Middleware moved to top
 
 app.get('/api/patients', async (req, res) => {
     try {
