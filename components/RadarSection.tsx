@@ -7,12 +7,24 @@ import {
   PolarAngleAxis, 
   PolarRadiusAxis, 
   ResponsiveContainer,
-  Tooltip
+  Tooltip,
+  Legend
 } from 'recharts';
 
 interface Props {
   data: any[];
+  keys: string[];
 }
+
+// Color palette for multiple series
+const colorPalette = [
+  { stroke: '#3b82f6', fill: '#3b82f6' }, // Blue (Latest)
+  { stroke: '#f43f5e', fill: '#f43f5e' }, // Rose (Previous 1)
+  { stroke: '#10b981', fill: '#10b981' }, // Emerald (Previous 2)
+  { stroke: '#f59e0b', fill: '#f59e0b' }, // Amber (Previous 3)
+  { stroke: '#8b5cf6', fill: '#8b5cf6' }, // Violet
+  { stroke: '#ec4899', fill: '#ec4899' }, // Pink
+];
 
 // Clinical metadata for nutritional categories
 const categoryMeta: Record<string, { desc: string; tip: string }> = {
@@ -47,28 +59,38 @@ const CustomTooltip = ({ active, payload }: any) => {
     };
     
     return (
-      <div className="bg-white/98 backdrop-blur-md p-3 border border-slate-200 shadow-2xl rounded-2xl min-w-[240px] animate-in fade-in zoom-in-95 duration-200 pointer-events-none z-[100]">
-        <div className="flex justify-between items-center mb-2">
-          <p className="text-[11px] font-black text-slate-800">{item.subject}</p>
-          <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-            {item.value}%
-          </span>
+      <div className="bg-white/98 backdrop-blur-md p-4 border border-slate-200 shadow-2xl rounded-2xl min-w-[280px] animate-in fade-in zoom-in-95 duration-200 pointer-events-none z-[100]">
+        <div className="flex justify-between items-center mb-3">
+          <p className="text-xs font-black text-slate-800">{item.subject}</p>
         </div>
         
-        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-3">
-          <div 
-            className="h-full bg-blue-500 rounded-full transition-all duration-700 ease-out" 
-            style={{ width: `${item.value}%` }}
-          ></div>
+        <div className="space-y-3 mb-4">
+          {payload.map((entry: any, index: number) => (
+            <div key={index} className="flex flex-col gap-1">
+              <div className="flex justify-between items-center text-[10px]">
+                <span className="font-bold text-slate-500 flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
+                  {entry.name}
+                </span>
+                <span className="font-black text-slate-800">{entry.value}%</span>
+              </div>
+              <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full rounded-full transition-all duration-700 ease-out" 
+                  style={{ width: `${entry.value}%`, backgroundColor: entry.color }} 
+                ></div>
+              </div>
+            </div>
+          ))}
         </div>
 
-        <p className="text-[10px] text-slate-500 leading-relaxed mb-3">
+        <p className="text-[10px] text-slate-400 leading-relaxed mb-3 italic">
           {meta.desc}
         </p>
         
-        <div className="flex items-start gap-2 bg-blue-50/50 p-2.5 rounded-xl border border-blue-100/50">
-          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-1 shrink-0"></div>
-          <p className="text-[9px] text-blue-700 font-bold leading-tight">
+        <div className="flex items-start gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+          <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-[9px] text-slate-600 font-bold leading-tight">
             {meta.tip}
           </p>
         </div>
@@ -78,10 +100,15 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-const RadarSection: React.FC<Props> = ({ data }) => {
+import { Lightbulb } from 'lucide-react';
+
+const RadarSection: React.FC<Props> = ({ data, keys }) => {
+  // Use provided keys or default to 'value' if none
+  const radarKeys = keys && keys.length > 0 ? keys : ['value'];
+
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data} margin={{ top: 0, right: 30, bottom: 0, left: 30 }}>
+      <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data} margin={{ top: 0, right: 30, bottom: 20, left: 30 }}>
         <PolarGrid stroke="#f1f5f9" strokeDasharray="3 3" />
         <PolarAngleAxis 
           dataKey="subject" 
@@ -95,18 +122,26 @@ const RadarSection: React.FC<Props> = ({ data }) => {
         />
         <Tooltip 
           content={<CustomTooltip />} 
-          cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '4 4' }}
         />
-        <Radar
-          name="達成率"
-          dataKey="value"
-          stroke="#3b82f6"
-          strokeWidth={2.5}
-          fill="#3b82f6"
-          fillOpacity={0.15}
-          activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 3 }}
-          dot={{ r: 4, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }}
+        <Legend 
+          verticalAlign="bottom" 
+          height={36}
+          iconType="circle"
+          wrapperStyle={{ fontSize: '10px', fontWeight: 800, color: '#64748b', paddingTop: '10px' }}
         />
+        {radarKeys.map((key, index) => (
+          <Radar
+            key={key}
+            name={key === 'value' ? '達成率' : key}
+            dataKey={key}
+            stroke={colorPalette[index % colorPalette.length].stroke}
+            strokeWidth={index === 0 ? 3 : 1.5}
+            fill={colorPalette[index % colorPalette.length].fill}
+            fillOpacity={index === 0 ? 0.15 : 0.05}
+            activeDot={{ r: 6, fill: colorPalette[index % colorPalette.length].stroke, stroke: '#fff', strokeWidth: 3 }}
+            dot={index === 0 ? { r: 4, fill: colorPalette[index % colorPalette.length].stroke, stroke: '#fff', strokeWidth: 2 } : false}
+          />
+        ))}
       </RadarChart>
     </ResponsiveContainer>
   );

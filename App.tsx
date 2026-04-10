@@ -43,6 +43,7 @@ const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [trendData, setTrendData] = useState<{ date: string, score: number, weight: number }[]>([]);
+  const [radarKeys, setRadarKeys] = useState<string[]>([]);
 
   const [radarData, setRadarData] = useState([
     { subject: '蛋白質攝取', value: 0, fullMark: 100 },
@@ -142,13 +143,23 @@ const App: React.FC = () => {
         { ...prev[2], value: parseFloat(lastRow['CC(小腿圍)'] || lastRow['CC'] || lastRow['CC_小腿圍'] || lastRow['小腿圍']) || 0 }
       ]);
 
-      setRadarData([
-        { subject: '蛋白質攝取', value: parseInt(getField(lastRow, ['蛋白質攝取(%)', '蛋白質攝取', 'Protein'])) || 0, fullMark: 100 },
-        { subject: '蔬果攝取', value: parseInt(getField(lastRow, ['蔬果攝取(%)', '蔬果攝取', 'Vegetables'])) || 0, fullMark: 100 },
-        { subject: '液體攝取', value: parseInt(getField(lastRow, ['液體攝取(%)', '液體攝取', 'Fluids'])) || 0, fullMark: 100 },
-        { subject: '進食能力', value: parseInt(getField(lastRow, ['進食能力(%)', '進食能力', 'Feeding'])) || 0, fullMark: 100 },
-        { subject: '餐數', value: parseInt(getField(lastRow, ['餐數(%)', '餐數', 'Meals'])) || 0, fullMark: 100 },
-      ]);
+      const subjects = ['蛋白質攝取', '蔬果攝取', '液體攝取', '進食能力', '餐數'];
+      const keys: string[] = [];
+      const transformedRadar = subjects.map((subject, sIdx) => {
+        const entry: any = { subject, fullMark: 100 };
+        data.forEach((row: any) => {
+          const dateStr = typeof row['日期'] === 'string' ? row['日期'].split('T')[0] : (row['日期'] instanceof Date ? row['日期'].toISOString().split('T')[0] : row['日期']);
+          if (!keys.includes(dateStr)) keys.push(dateStr);
+          entry[dateStr] = parseInt(getField(row, [
+            subject + '(%)', subject, 
+            sIdx === 0 ? 'Protein' : sIdx === 1 ? 'Vegetables' : sIdx === 2 ? 'Fluids' : sIdx === 3 ? 'Feeding' : 'Meals'
+          ])) || 0;
+        });
+        return entry;
+      });
+
+      setRadarKeys(keys);
+      setRadarData(transformedRadar);
 
       setHealthData([
         parseInt(getField(lastRow, ['自覺營養狀況(0-2)', '自覺營養狀況', 'Self_Nutrition'])) || 0,
@@ -262,15 +273,23 @@ const App: React.FC = () => {
           { ...prev[2], value: parseFloat(lastRow[5]) || 0 }  // CC
         ]);
 
-        // Update Radar Data
-        // CSV Cols: 6:Protein, 7:Veg, 8:Fluid, 9:Feeding, 10:Meals
-        setRadarData([
-          { subject: '蛋白質攝取', value: parseInt(lastRow[6]) || 0, fullMark: 100 },
-          { subject: '蔬果攝取', value: parseInt(lastRow[7]) || 0, fullMark: 100 },
-          { subject: '液體攝取', value: parseInt(lastRow[8]) || 0, fullMark: 100 },
-          { subject: '進食能力', value: parseInt(lastRow[9]) || 0, fullMark: 100 },
-          { subject: '餐數', value: parseInt(lastRow[10]) || 0, fullMark: 100 },
-        ]);
+        // Update Radar Data (All rows from CSV)
+        const subjects = ['蛋白質攝取', '蔬果攝取', '液體攝取', '進食能力', '餐數'];
+        const keys: string[] = [];
+        const transformedRadar = subjects.map((subject, sIdx) => {
+          const entry: any = { subject, fullMark: 100 };
+          rows.forEach((row) => {
+            const cols = row.split(',').map(c => c.trim());
+            const dateStr = cols[0];
+            if (!keys.includes(dateStr)) keys.push(dateStr);
+            // Cols 6-10: Protein, Veg, Fluid, Feeding, Meals
+            entry[dateStr] = parseInt(cols[6 + sIdx]) || 0;
+          });
+          return entry;
+        });
+
+        setRadarKeys(keys);
+        setRadarData(transformedRadar);
 
         // Update Health Data
         // CSV Cols: 11:SelfNutrition, 12:PeerHealth, 13:Neuro
@@ -447,7 +466,7 @@ const App: React.FC = () => {
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <div className="flex items-center gap-2 mb-6"><PieChart className="text-indigo-600 w-5 h-5" /><h2 className="text-lg font-bold text-slate-800">飲食攝取缺口</h2></div>
-            <div className="h-[300px] w-full"><RadarSection data={radarData} /></div>
+            <div className="h-[300px] w-full"><RadarSection data={radarData} keys={radarKeys} /></div>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
