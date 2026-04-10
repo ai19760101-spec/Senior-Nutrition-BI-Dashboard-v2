@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://smtp-enclosed-herein-rid.trycloudflare.com/api/:path*"
+      "destination": "https://daughters-breakdown-batman-tramadol.trycloudflare.com/api/:path*"
     }
   ]
 }
