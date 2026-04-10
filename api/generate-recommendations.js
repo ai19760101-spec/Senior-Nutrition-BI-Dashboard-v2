@@ -23,32 +23,53 @@ export default async function handler(req, res) {
     const clinicalData = req.body;
     const genAI = new GoogleGenerativeAI(geminiKey);
     
-    // Improved Async Fallback Logic
-    let result;
-    try {
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash-latest",
-        generationConfig: { responseMimeType: "application/json" }
-      });
-      
-      const prompt = `你是一位講求實證醫學 的資深臨床營養師。請根據下列真實的臨床數據，撰寫一份營養評估與介入報告。
-      
-      【個案臨床數據總表】
-      ${JSON.stringify(clinicalData, null, 2)}
-  
-      【嚴格寫作規範 (Strict Rules)】
-      1. **拒絕幻覺**: 報告中提到的每一個狀況，都必須有數據支持。
-      2. **強制數據引用**: 在每一句建議結尾標註依據，例如: [蛋白質攝取: 45%], [CC: 29cm]。
-      3. **格式要求**: 請依照以下 JSON 格式輸出：
-         { "title": "...", "dataSummary": "...", "recommendations": ["...", "..."] }`;
+    // Gemini 3.1 Hierarchy Fallback Logic
+    const MODEL_HIERARCHY = [
+      "gemini-3.1-pro-preview",
+      "gemini-3.1-flash-lite-preview",
+      "gemini-3-flash-preview"
+    ];
 
-      result = await model.generateContent(prompt);
-    } catch (primaryErr) {
-      console.warn('Primary model (flash) failed, falling back to gemini-pro:', primaryErr.message);
-      const fallbackModel = genAI.getGenerativeModel({ model: "gemini-pro" });
-      const fallbackPrompt = `請根據專用格式回報個案數據分析結果。格式：{ "title": "...", "dataSummary": "...", "recommendations": ["...", "..."] }。以下是數據：${JSON.stringify(clinicalData)}`;
-      result = await fallbackModel.generateContent(fallbackPrompt);
+    let result;
+    let lastError;
+    let usedModel = "";
+
+    const prompt = `你是一位講求實證醫學 的資深臨床營養師。請根據下列真實的臨床數據，撰寫一份營養評估與介入報告。
+    
+    【個案臨床數據總表】
+    ${JSON.stringify(clinicalData, null, 2)}
+
+    【嚴格寫作規範 (Strict Rules)】
+    1. **拒絕幻覺**: 報告中提到的每一個狀況，都必須有數據支持。
+    2. **強制數據引用**: 在每一句建議結尾標註依據，例如: [蛋白質攝取: 45%], [CC: 29cm]。
+    3. **格式要求**: 請依照以下 JSON 格式輸出：
+       { "title": "...", "dataSummary": "...", "recommendations": ["...", "..."] }`;
+
+    for (const modelId of MODEL_HIERARCHY) {
+      try {
+        console.log(`Executing analysis with hierarchy tier: ${modelId}`);
+        const model = genAI.getGenerativeModel({ 
+          model: modelId,
+          generationConfig: { responseMimeType: "application/json" }
+        });
+        
+        result = await model.generateContent(prompt);
+        if (result) {
+          usedModel = modelId;
+          break;
+        }
+      } catch (err) {
+        lastError = err;
+        console.warn(`Hierarchy tier [${modelId}] failed:`, err.message);
+        continue; // Try next model in sequence
+      }
     }
+
+    if (!result) {
+      throw new Error(`All hierarchy models failed. Last error: ${lastError?.message}`);
+    }
+
+    console.log(`Success using model: ${usedModel}`);
     
     const response = await result.response;
     let text = response.text();
