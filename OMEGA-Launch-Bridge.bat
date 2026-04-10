@@ -1,7 +1,9 @@
 @echo off
 setlocal
+:: Force UTF-8
+chcp 65001 > nul
 cd /d %~dp0
-TITLE OMEGA AD-COMPATIBLE LAUNCHER (FIXED)
+TITLE OMEGA AD-COMPATIBLE LAUNCHER
 
 echo [STEP 1] Starting Background API Silently...
 start wscript.exe start-api-silent.vbs

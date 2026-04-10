@@ -1,7 +1,9 @@
 @echo off
 setlocal
+:: Force UTF-8
+chcp 65001 > nul
 cd /d %~dp0
-TITLE OMEGA SERVICE CLEANUP (FIXED)
+TITLE OMEGA SERVICE CLEANUP
 
 echo [INFO] Stopping all Node processes...
 taskkill /F /IM node.exe /T
