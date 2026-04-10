@@ -1,6 +1,6 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   // 1. Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -61,4 +61,4 @@ module.exports = async (req, res) => {
     console.error('Vercel AI Generation Failed:', err);
     res.status(500).json({ error: `AI 服務回傳錯誤: ${err.message}` });
   }
-};
+}
