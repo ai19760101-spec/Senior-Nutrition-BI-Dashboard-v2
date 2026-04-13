@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://why-compare-libs-thou.trycloudflare.com/api/:path*"
+      "destination": "https://proposition-receptors-continually-customs.trycloudflare.com/api/:path*"
     }
   ]
 }
