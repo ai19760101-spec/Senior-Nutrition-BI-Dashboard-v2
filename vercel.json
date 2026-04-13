@@ -6,7 +6,7 @@
     },
     {
       "source": "/api/:path*",
-      "destination": "https://miscellaneous-cited-ordinance-any.trycloudflare.com/api/:path*"
+      "destination": "https://providing-permit-eventually-priced.trycloudflare.com/api/:path*"
     }
   ]
 }
