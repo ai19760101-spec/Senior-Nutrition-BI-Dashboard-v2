@@ -1,12 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/generate-recommendations",
-      "destination": "/api/generate-recommendations"
-    },
-    {
       "source": "/api/:path*",
-      "destination": "https://providing-permit-eventually-priced.trycloudflare.com/api/:path*"
+      "destination": "https://seek-wichita-auctions-respondent.trycloudflare.com/api/:path*"
     }
   ]
 }
