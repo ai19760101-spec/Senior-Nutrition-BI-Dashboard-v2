@@ -1,15 +1,14 @@
 @echo off
 setlocal
 :: Force Local Path normalization
-pushd "\\tsclient\C\Antigravity_Project\HealthPreservationVillage\Senior-Nutrition-BI-Dashboard"
+pushd "C:\Antigravity_Project\HealthPreservationVillage\Senior-Nutrition-BI-Dashboard"
 if errorlevel 1 (
-    echo [ERROR] Cannot access \\tsclient\C.
-    echo Please make sure RDP Drive Sharing is enabled for C: drive.
+    echo [ERROR] Cannot access C:\Antigravity_Project...
     pause
     exit /b
 )
 
-echo [OMEGA] Starting Remote Sync...
+echo [OMEGA] Starting Local Sync...
 if not exist "D:\Senior-Nutrition-BI-Dashboard-v2-main" mkdir "D:\Senior-Nutrition-BI-Dashboard-v2-main"
 
 :: Execute Robocopy

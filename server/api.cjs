@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const { mssql, poolPromise, geminiKey } = require('./dbConfig.cjs');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const line = require('@line/bot-sdk');
 
 const app = express();
 app.use(cors());
