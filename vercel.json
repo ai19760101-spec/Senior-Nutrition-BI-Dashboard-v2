@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://flexible-leg-clicking-nor.trycloudflare.com/api/:path*"
+      "destination": "https://producer-massive-instant-airlines.trycloudflare.com/api/:path*"
     }
   ]
 }
